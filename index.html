@@ -59,10 +59,10 @@ function renderLoop() {
 
   const now = Date.now();
   if (now - lastSend > 200) { // send every 200ms
-    fetch("http://localhost:3000/frame", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ frame: output })
+    fetch("https://70fcbb8424e4.ngrok-free.app/frame", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ frame: output })
     });
     lastSend = now;
   }
@@ -72,3 +72,4 @@ function renderLoop() {
 
 startCamera();
 </script>
+
