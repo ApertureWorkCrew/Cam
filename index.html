@@ -58,18 +58,18 @@ function renderLoop() {
   emojiPre.textContent = output;
 
   const now = Date.now();
-  if (now - lastSend > 200) { // send every 200ms
-    fetch("https://70fcbb8424e4.ngrok-free.app/frame", {
+if (now - lastSend > 200) { 
+  fetch("https://70fcbb8424e4.ngrok-free.app/frame", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ frame: output })
-    });
-    lastSend = now;
-  }
-
+    body: JSON.stringify({ frame: output }) // must match server
+  });
+  lastSend = now;
+}
   requestAnimationFrame(renderLoop);
 }
 
 startCamera();
 </script>
+
 
