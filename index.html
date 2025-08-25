@@ -1,92 +1,74 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>OBS Emoji Camera</title>
-  <style>
-    body {
-      background: #111;
-      color: white;
-      font-family: monospace;
-      text-align: center;
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const emojiPre = document.getElementById('emoji');
+
+// Color emoji mapping
+const colors = [
+  {emoji:"⬛", r:0, g:0, b:0},
+  {emoji:"🟥", r:255, g:0, b:0},
+  {emoji:"🟧", r:255, g:165, b:0},
+  {emoji:"🟨", r:255, g:255, b:0},
+  {emoji:"🟩", r:0, g:255, b:0},
+  {emoji:"🟦", r:0, g:0, b:255},
+  {emoji:"🟪", r:128, g:0, b:128},
+  {emoji:"⬜", r:255, g:255, b:255}
+];
+
+function getEmoji(r, g, b) {
+  let closest = colors[0];
+  let minDist = Infinity;
+  for (const c of colors) {
+    const dist = (r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2;
+    if (dist < minDist) {
+      minDist = dist;
+      closest = c;
     }
-    video { display: none; }
-    pre {
-      font-size: 1px;
-      line-height: 1px;
-      white-space: pre;
+  }
+  return closest.emoji;
+}
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    renderLoop();
+  } catch (err) {
+    console.error("Camera error:", err);
+  }
+}
+
+let lastSend = 0;
+
+function renderLoop() {
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imgData.data;
+
+  let output = "";
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const i = (y * canvas.width + x) * 4;
+      const r = data[i], g = data[i+1], b = data[i+2];
+      output += getEmoji(r, g, b);
     }
-  </style>
-</head>
-<body>
-  <h1>🎥 OBS → Emoji Camera</h1>
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas" width="1280" height="720" style="display:none"></canvas>
-  <pre id="emoji"></pre>
+    output += "\n";
+  }
+  emojiPre.textContent = output;
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const emojiPre = document.getElementById('emoji');
+  const now = Date.now();
+  if (now - lastSend > 200) { // send every 200ms
+    fetch("http://localhost:3000/frame", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ frame: output })
+    });
+    lastSend = now;
+  }
 
-    // Color emoji mapping
-    const colors = [
-      {emoji:"⬛", r:0, g:0, b:0},
-      {emoji:"🟥", r:255, g:0, b:0},
-      {emoji:"🟧", r:255, g:165, b:0},
-      {emoji:"🟨", r:255, g:255, b:0},
-      {emoji:"🟩", r:0, g:255, b:0},
-      {emoji:"🟦", r:0, g:0, b:255},
-      {emoji:"🟪", r:128, g:0, b:128},
-      {emoji:"⬜", r:255, g:255, b:255}
-    ];
+  requestAnimationFrame(renderLoop);
+}
 
-    function getEmoji(r, g, b) {
-      let closest = colors[0];
-      let minDist = Infinity;
-      for (const c of colors) {
-        const dist = (r - c.r) ** 2 + (g - c.g) ** 2 + (b - c.b) ** 2;
-        if (dist < minDist) {
-          minDist = dist;
-          closest = c;
-        }
-      }
-      return closest.emoji;
-    }
-
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        renderLoop();
-      } catch (err) {
-        console.error("Camera error:", err);
-      }
-    }
-
-    function renderLoop() {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
-
-      let output = "";
-      for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
-          const i = (y * canvas.width + x) * 4;
-          const r = data[i], g = data[i+1], b = data[i+2];
-          output += getEmoji(r, g, b);
-        }
-        output += "\n";
-      }
-      emojiPre.textContent = output;
-
-      requestAnimationFrame(renderLoop);
-    }
-
-    startCamera();
-  </script>
-</body>
-</html>
-
-
+startCamera();
+</script>
