@@ -1,6 +1,61 @@
-<video id="video" autoplay playsinline></video>
+<canvas id="canvas" width="1280" height="720" style="display:none"></canvas>
+<pre id="emoji"></pre>
 <script>
-navigator.mediaDevices.getUserMedia({video:true})
-  .then(stream => { document.getElementById('video').srcObject = stream; })
-  .catch(err => { console.error(err); });
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const emojiPre = document.getElementById('emoji');
+
+const colors = [
+  {emoji:"⬛", r:0, g:0, b:0},
+  {emoji:"🟥", r:255, g:0, b:0},
+  {emoji:"🟧", r:255, g:165, b:0},
+  {emoji:"🟨", r:255, g:255, b:0},
+  {emoji:"🟩", r:0, g:255, b:0},
+  {emoji:"🟦", r:0, g:0, b:255},
+  {emoji:"🟪", r:128, g:0, b:128},
+  {emoji:"⬜", r:255, g:255, b:255}
+];
+
+function getEmoji(r,g,b){
+  let closest=colors[0], minDist=Infinity;
+  for(const c of colors){
+    const dist=(r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2;
+    if(dist<minDist){ minDist=dist; closest=c; }
+  }
+  return closest.emoji;
+}
+
+let lastSend=0;
+
+function renderLoop(){
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+
+  let output="";
+  for(let y=0;y<canvas.height;y++){
+    for(let x=0;x<canvas.width;x++){
+      const i=(y*canvas.width+x)*4;
+      output+=getEmoji(data[i], data[i+1], data[i+2]);
+    }
+    output+="\n";
+  }
+  emojiPre.textContent=output;
+
+  const now=Date.now();
+  if(now-lastSend>200){
+    fetch("https://70fcbb8424e4.ngrok-free.app/frame",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({frame:output})
+    }).catch(e=>console.error(e));
+    lastSend=now;
+  }
+
+  requestAnimationFrame(renderLoop);
+}
+
+video.onloadedmetadata = () => {
+  renderLoop();
+};
 </script>
