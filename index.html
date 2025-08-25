@@ -1,61 +1,73 @@
-<canvas id="canvas" width="1280" height="720" style="display:none"></canvas>
-<pre id="emoji"></pre>
-<script>
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const emojiPre = document.getElementById('emoji');
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Emoji Camera Debug</title>
+  <style>
+    body { background: #111; color: white; font-family: monospace; text-align: center; }
+    video { display: none; }
+    pre { font-size: 5px; line-height: 5px; white-space: pre; }
+  </style>
+</head>
+<body>
+  <h1>🎥 Emoji Camera Debug</h1>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas" width="128" height="72" style="display:none"></canvas>
+  <pre id="emoji"></pre>
 
-const colors = [
-  {emoji:"⬛", r:0, g:0, b:0},
-  {emoji:"🟥", r:255, g:0, b:0},
-  {emoji:"🟧", r:255, g:165, b:0},
-  {emoji:"🟨", r:255, g:255, b:0},
-  {emoji:"🟩", r:0, g:255, b:0},
-  {emoji:"🟦", r:0, g:0, b:255},
-  {emoji:"🟪", r:128, g:0, b:128},
-  {emoji:"⬜", r:255, g:255, b:255}
-];
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const emojiPre = document.getElementById('emoji');
 
-function getEmoji(r,g,b){
-  let closest=colors[0], minDist=Infinity;
-  for(const c of colors){
-    const dist=(r-c.r)**2 + (g-c.g)**2 + (b-c.b)**2;
-    if(dist<minDist){ minDist=dist; closest=c; }
-  }
-  return closest.emoji;
-}
+    const colors = [
+      {emoji:"⬛", r:0, g:0, b:0},
+      {emoji:"🟥", r:255, g:0, b:0},
+      {emoji:"🟧", r:255, g:165, b:0},
+      {emoji:"🟨", r:255, g:255, b:0},
+      {emoji:"🟩", r:0, g:255, b:0},
+      {emoji:"🟦", r:0, g:0, b:255},
+      {emoji:"🟪", r:128, g:0, b:128},
+      {emoji:"⬜", r:255, g:255, b:255}
+    ];
 
-let lastSend=0;
-
-function renderLoop(){
-  ctx.drawImage(video,0,0,canvas.width,canvas.height);
-  const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-
-  let output="";
-  for(let y=0;y<canvas.height;y++){
-    for(let x=0;x<canvas.width;x++){
-      const i=(y*canvas.width+x)*4;
-      output+=getEmoji(data[i], data[i+1], data[i+2]);
+    function getEmoji(r,g,b) {
+      let closest = colors[0];
+      let minDist = Infinity;
+      for (const c of colors) {
+        const dist = (r - c.r)**2 + (g - c.g)**2 + (b - c.b)**2;
+        if (dist < minDist) { minDist = dist; closest = c; }
+      }
+      return closest.emoji;
     }
-    output+="\n";
-  }
-  emojiPre.textContent=output;
 
-  const now=Date.now();
-  if(now-lastSend>200){
-    fetch("https://70fcbb8424e4.ngrok-free.app/frame",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({frame:output})
-    }).catch(e=>console.error(e));
-    lastSend=now;
-  }
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        setInterval(captureFrame, 1000); // capture every 1 second
+      } catch (err) {
+        console.error("Camera error:", err);
+      }
+    }
 
-  requestAnimationFrame(renderLoop);
-}
+    function captureFrame() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-video.onloadedmetadata = () => {
-  renderLoop();
-};
-</script>
+      let output = "";
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const i = (y * canvas.width + x) * 4;
+          output += getEmoji(data[i], data[i+1], data[i+2]);
+        }
+        output += "\n";
+      }
+      emojiPre.textContent = output;
+    }
+
+    startCamera();
+  </script>
+</body>
+</html>
