@@ -2,41 +2,69 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>OBS Virtual Camera Test</title>
+  <title>OBS Emoji Camera</title>
   <style>
     body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
       background: #111;
       color: white;
-      font-family: Arial, sans-serif;
+      font-family: monospace;
+      text-align: center;
     }
-    video {
-      width: 80%;
-      max-width: 800px;
-      border: 3px solid white;
-      border-radius: 10px;
-      background: black;
+    video { display: none; }
+    pre {
+      font-size: 10px;
+      line-height: 10px;
+      white-space: pre;
     }
   </style>
 </head>
 <body>
-  <h1>OBS Virtual Camera Feed</h1>
+  <h1>🎥 OBS → Emoji Camera</h1>
   <video id="video" autoplay playsinline></video>
+  <canvas id="canvas" width="32" height="16" style="display:none"></canvas>
+  <pre id="emoji"></pre>
 
   <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const emojiPre = document.getElementById('emoji');
+
+    // Brightness → emoji mapping
+    const emojiMap = ["⬛","⬜"]; // simple b/w version
+    // you can use more like: ["⬛","🟦","🟩","🟨","🟥","⬜"]
+
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        document.getElementById('video').srcObject = stream;
+        video.srcObject = stream;
+        renderLoop();
       } catch (err) {
-        console.error("Error accessing camera:", err);
+        console.error("Camera error:", err);
       }
     }
+
+    function renderLoop() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+
+      let output = "";
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const i = (y * canvas.width + x) * 4;
+          const r = data[i], g = data[i+1], b = data[i+2];
+          const brightness = (r+g+b)/3;
+          const emoji = brightness < 128 ? emojiMap[0] : emojiMap[1];
+          output += emoji;
+        }
+        output += "\n";
+      }
+      emojiPre.textContent = output;
+
+      requestAnimationFrame(renderLoop);
+    }
+
     startCamera();
   </script>
 </body>
